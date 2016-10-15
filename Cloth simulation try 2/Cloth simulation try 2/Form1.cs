@@ -28,6 +28,10 @@ namespace Cloth_simulation_try_2
         Point mouse;
         Color backgroundColor = Color.Black;
         Color clothColor = Color.White;
+        private Brush backgroundBrush;
+        private Brush clothBrush;
+        private Pen clothPen;
+
         public Form1()
         {
             InitializeComponent();
@@ -44,6 +48,10 @@ namespace Cloth_simulation_try_2
             typeof(Panel).InvokeMember("DoubleBuffered", BindingFlags.SetProperty
             | BindingFlags.Instance | BindingFlags.NonPublic, null,
             splitContainer1.Panel1, new object[] { true });
+
+            backgroundBrush = new SolidBrush(backgroundColor);
+            clothBrush = new SolidBrush(clothColor);
+            clothPen = new Pen(clothColor);
         }
 
         private void ClickTimer_Tick(object sender, EventArgs e)
@@ -76,6 +84,7 @@ namespace Cloth_simulation_try_2
         }
         private void updatePoints()
         {
+            clothPoint[] nearbyPoints = { null, null, null, null};
             for (int i = 0; i < clothDimentions[1]; i++)
             {
                 for (int j = 0; j < clothDimentions[0]; j++)
@@ -93,25 +102,12 @@ namespace Cloth_simulation_try_2
                     //var rightPoint = clothpoints[i * clothDimentions[0] + j + 1];
                     //var belowPoint = clothpoints[(i + 1) * clothDimentions[0] + j];
                     //var leftPoint = clothpoints[i * clothDimentions[0] + j - 1];
-                    List<clothPoint> nearbyPoints = new List<clothPoint>(4)
-                    { null, null, null, null};
-                    if (i > 0)
-                    {
-                        nearbyPoints[0] = clothpoints[i - 1][j];
-                    }
-                    if (j + 1 < clothDimentions[0])
-                    {
-                        nearbyPoints[1] = clothpoints[i][j + 1];
-                    }
-                    if (i + 1 < clothDimentions[1])
-                    {
-                        nearbyPoints[2] = clothpoints[i + 1][j];
-                    }
-                    if (j > 0)
-                    {
-                        nearbyPoints[3] = clothpoints[i][j - 1];
-                    }
-                    for (int k = 0; k < nearbyPoints.Count; k++)
+                    nearbyPoints[0] = i > 0 ? clothpoints[i - 1][j] : null;
+                    nearbyPoints[1] = j + 1 < clothDimentions[0] ? clothpoints[i][j + 1] : null;
+                    nearbyPoints[2] = i + 1 < clothDimentions[1] ? clothpoints[i + 1][j] : null;
+                    nearbyPoints[3] = j > 0 ? clothpoints[i][j - 1] : null;
+
+                    for (int k = 0; k < nearbyPoints.Length; k++)
                     {
                         if (nearbyPoints[k] == null)
                             continue;
@@ -169,26 +165,34 @@ namespace Cloth_simulation_try_2
         private void _Paint(object sender, PaintEventArgs e)
         {
             updatePoints();
-            e.Graphics.FillRectangle(new SolidBrush(backgroundColor), ClientRectangle);
+            e.Graphics.FillRectangle(backgroundBrush, ClientRectangle);
+            double xLast = 0.0;
             for (int i = 0; i < clothDimentions[1]; i++)
             {
+                if (xLast > ClientRectangle.Right)
+                    break;
+
                 for (int j = 0; j < clothDimentions[0]; j++)
                 {
                     clothPoint t = clothpoints[i][j];
+                    if (t.Y > ClientRectangle.Bottom)
+                        break;
+                    xLast = t.X;
+
                     if (gridCheckbox.Checked)
                     {
                         if (j + 1 < clothDimentions[0])
                         {
-                            e.Graphics.DrawLine(new Pen(clothColor), (int)t.X, (int)t.Y, (int)clothpoints[i][j + 1].X, (int)clothpoints[i][j + 1].Y);
+                            e.Graphics.DrawLine(clothPen, (int)t.X, (int)t.Y, (int)clothpoints[i][j + 1].X, (int)clothpoints[i][j + 1].Y);
                         }
                         if (i + 1 < clothDimentions[1])
                         {
-                            e.Graphics.DrawLine(new Pen(clothColor), (int)t.X, (int)t.Y, (int)clothpoints[i + 1][j].X, (int)clothpoints[i + 1][j].Y);
+                            e.Graphics.DrawLine(clothPen, (int)t.X, (int)t.Y, (int)clothpoints[i + 1][j].X, (int)clothpoints[i + 1][j].Y);
                         }
                     }
                     else if (pointsCheckbox.Checked)
                     {
-                            e.Graphics.FillEllipse(new SolidBrush(clothColor), t.getPointF().X, t.getPointF().Y/*(int)clothpoints[i][j].X, (int)clothpoints[i][j].Y*/, 2, 2);
+                            e.Graphics.FillEllipse(clothBrush, t.getPointF().X, t.getPointF().Y/*(int)clothpoints[i][j].X, (int)clothpoints[i][j].Y*/, 2, 2);
                     }
                 }
             }
@@ -254,12 +258,15 @@ namespace Cloth_simulation_try_2
         {
             colorDialog1.ShowDialog();
             clothColor = colorDialog1.Color;
+            clothBrush = new SolidBrush(clothColor);
+            clothPen = new Pen(clothColor);
         }
 
         private void backgroundColorButton_Click(object sender, EventArgs e)
         {
             colorDialog1.ShowDialog();
             backgroundColor = colorDialog1.Color;
+            backgroundBrush = new SolidBrush(backgroundColor);
         }
 
         private void pointsCheckbox_CheckedChanged(object sender, EventArgs e)
